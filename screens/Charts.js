@@ -1,18 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, ScrollView, Text, TouchableOpacity, View, Vibration, SafeAreaView } from 'react-native';
 
-import Session from '../components/Session'
+import { LineChart, Grid } from 'react-native-svg-charts'
 import { Colors } from '../assets/Colors'
 import NavHeader from '../components/NavHeader'
 
 import { STORAGE } from '../api/'
 
-export default class Timeline extends React.Component {
+export default class Charts extends React.Component {
 
     constructor(props) {
         super(props)
         this.state = {
-            sessions: []
+            sessions: [],
+            data: []
         }
     }
 
@@ -30,8 +31,13 @@ export default class Timeline extends React.Component {
 
     setSessions = async () => {
         let arr = await STORAGE.getAllSessions()
-        this.setState({ sessions: arr.reverse() }, () => {
-            console.log(this.state.sessions)
+        let slouches = []
+        arr.forEach(sesh => {
+            slouches.push(sesh.duration)
+        })
+        console.log(slouches)
+        this.setState({ sessions: arr, data: slouches }, () => {
+            console.log(this.state.data.length != 0)
         })
     }
 
@@ -44,16 +50,19 @@ export default class Timeline extends React.Component {
     render() {
         return (
             <SafeAreaView style={styles.container}>
-                
-                <NavHeader nav={this.props.navigation} />
-                {this.state.sessions.length == 0 && <Text style={styles.title}>Timeline</Text>}
-                {this.state.sessions.length == 0 && <Text style={styles.subTitle}>Complete Your First Frosture Session For Data To Appear Here!</Text>}
-                {this.state.sessions.length != 0 && <ScrollView style={{ alignSelf: 'stretch' }}>
-                <Text style={styles.title}>Timeline</Text>
 
-                    {this.state.sessions.length > 0 && this.state.sessions.map(sesh => <Session key={sesh.date.toISOString()} session={sesh} />)}
-                </ScrollView>
+                <NavHeader nav={this.props.navigation} />
+                <Text style={styles.title}>Chart</Text>
+                {this.state.data.length != 0 && <LineChart
+                    style={{ height: 400 }}
+                    data={this.state.data}
+                    svg={{ stroke: 'rgb(134, 65, 244)' }}
+                    contentInset={{ top: 20, bottom: 20 }}
+                >
+                    <Grid />
+                </LineChart>
                 }
+
             </SafeAreaView>
         );
     }
@@ -65,7 +74,7 @@ export default class Timeline extends React.Component {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        justifyContent: 'flex-start',
+        justifyContent: 'space-between',
         paddingHorizontal: 10,
         alignItems: 'center',
         backgroundColor: Colors.SECONDARY,
@@ -82,13 +91,6 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         color: "white",
         fontSize: 25,
-    },
-    subTitle: {
-        textAlign: 'center',
-        color: Colors.TERTIARY,
-        fontSize: 20,
-        marginTop : 100,
-        padding : 20
     },
     helperTxt: {
         textAlign: 'center',

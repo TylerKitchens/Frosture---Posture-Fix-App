@@ -4,9 +4,13 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import Home from './screens/Home'
 import Nav from './nav/Nav'
+import Sensitivity from './components/Sensitivity'
 export default function App() {
   return (
-    <Nav />
+    
+      <Nav />
+
+
   );
 }
 

@@ -19,9 +19,10 @@ export default class Btn extends React.Component {
             backgroundColor : this.props.bgColor,
             alignItems : 'center',
             padding : 10,
+            alignSelf : 'stretch',
             borderRadius : 18,
             height : 50,
-            width : '40%',
+            width : 200,
             margin : 5,
             borderWidth : 2,
             borderColor : this.props.borderColor != null ? this.props.borderColor : this.props.bgColor

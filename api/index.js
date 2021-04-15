@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
+import moment from 'moment'
 export const STORAGE = {
 
     async getAllSessions() {
@@ -59,5 +59,126 @@ export const STORAGE = {
         }
     },
 
+    async getTodayTotalTime(){
+        try {
+            const jsonValue = await AsyncStorage.getItem('@sessions')
+            if (jsonValue != null) {
+                let arr = JSON.parse(jsonValue)
+                let total = 0
+                arr.forEach(sess => {
+                    sess.date = new Date(sess.date)
+                    if(moment(sess.date).isSame(new Date(), "day") && sess.isCompleted){
+                        total += sess.duration / 60
+                    }
+                })
+                return total
+            }
+            else {
+                return -1
+            }
+        } catch (e) {
+            console.log(e)
+            return -2
+        }
+    },
+
+    async setSensitivity(val) {
+        try {
+            await AsyncStorage.setItem('@sensitivity', val.toString())
+        } catch (e) {
+            // saving error
+        }
+    },
+
+    async getSensitivity() {
+        try {
+            let sens =  await AsyncStorage.getItem('@sensitivity')
+            if(sens == null){
+                return 0
+            }else{
+                return parseFloat(sens)
+
+            }
+        } catch (e) {
+            // saving error
+        }
+    },
+
+    async saveTwoDayNotify(notify) {
+        try {
+            const jsonValue = JSON.stringify(notify)
+            await AsyncStorage.setItem('@twoDay', jsonValue)
+        } catch (e) {
+            // saving error
+        }
+    },
      
+    async getTwoDayNotify(){
+        try {
+            const jsonValue = await AsyncStorage.getItem('@twoDay')
+            if (jsonValue != null) {
+                let notification = JSON.parse(jsonValue)
+                return notification
+            }else { 
+                return {}
+            }
+        } catch (e) {
+            // saving error
+        }
+    },
+
+    async setNotificationStatus(status) {
+        try {
+            await AsyncStorage.setItem('@notifyStatus', status)
+        } catch (e) {
+            // saving error
+        }
+    },
+
+    async getNotificationStatus() {
+        try {
+            return await AsyncStorage.getItem('@notifyStatus')
+        } catch (e) {
+            // saving error
+        }
+    },
+
+    async deleteData() {
+        try {
+            await AsyncStorage.removeItem('@sessions')
+        } catch (e) {
+            // saving error
+        }
+    },
+
+    async setFirstTime() {
+        try {
+            await AsyncStorage.setItem('@firstTime', 'true')
+        } catch (e) {
+            // saving error
+        }
+    },
+
+    async isFirstTime() {
+        try {
+            let first = await AsyncStorage.getItem('@firstTime')
+            if(first){
+                return false
+            }else { 
+                return true
+            }
+        } catch (e) {
+            // saving error
+        }
+    },
+
+    async resetTutorial() {
+        try {
+            await AsyncStorage.removeItem('@firstTime')
+        } catch (e) {
+            // saving error
+        }
+    },
+
+
 }
