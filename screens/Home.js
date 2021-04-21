@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { AppState, Animated, StyleSheet, Switch, Text, Image, View, Vibration, SafeAreaView } from 'react-native';
+import { Modal, AppState, Animated, StyleSheet, Switch, Text, Image, View, Vibration, SafeAreaView } from 'react-native';
 import { Gyroscope } from 'expo-sensors';
 import * as Speech from 'expo-speech';
+import { activateKeepAwake, deactivateKeepAwake } from 'expo-keep-awake';
 
 import Notify from '../components/Notify'
 
@@ -43,12 +44,15 @@ export default class Home extends React.Component {
             skipNext: false,
             inverted: false,
             sessionID: '',
-            totalTime: -1,
+            score: 0,
             todayTime: 0,
             fadeAnimation: new Animated.Value(0),
             factIndex: 0,
             fadeTurn: true,
-            toolTipIndex: -1
+            toolTipIndex: -1,
+            countDown: 10,
+            showCountDown: false,
+            start: false
         }
 
     }
@@ -84,6 +88,8 @@ export default class Home extends React.Component {
     }
 
     async componentDidMount() {
+        activateKeepAwake();
+
 
         await Analytics.logEvent('ButtonTapped', {
             name: 'settings',
@@ -96,10 +102,11 @@ export default class Home extends React.Component {
             if (await STORAGE.isFirstTime()) {
                 this.setState({ toolTipIndex: 0 })
             }
+            this.setState({ score: await STORAGE.getScore() })
             this.forceUpdate()
         })
         AppState.addEventListener('change', this._handleAppStateChange);
-        this.setState({ todayTime: await STORAGE.getTodayTotalTime() })
+        this.setState({ score: await STORAGE.getScore() })
         this.textInterval = setInterval(() => {
             if (this.state.fadeTurn) {
                 this.setState({ factIndex: this.state.factIndex + 1 }, () => {
@@ -118,6 +125,7 @@ export default class Home extends React.Component {
     }
 
     componentWillUnmount() {
+        deactivateKeepAwake();
         this._unsubscribe()
         clearInterval(this.interval)
         clearInterval(this.textInterval)
@@ -149,33 +157,54 @@ export default class Home extends React.Component {
     };
 
     _unsubscribe = () => {
-        this.state.subscription && this.state.subscription.remove();
-        this.setState({ subscription: null })
+        Gyroscope.removeAllListeners()
+        console.log('unsubbed')
     };
 
     _finished = async () => {
-        clearInterval(this.interval)
-        this._unsubscribe()
-        await STORAGE.finished(this.state.sessionID, this.state.dingCount)
-        this.setState({ timerRunning: false, timerSeconds: this.state.initialTime, showCongrats: true, dingCount: 0 })
 
-        //Show a congradulations modal!
-        this.setState({ showCongrats: true })
+        clearInterval(this.interval)
+
+        this._unsubscribe()
+
+        await STORAGE.finished(this.state.sessionID, this.state.dingCount)
+
+        this.setState({ timerRunning: false, start: false, timerSeconds: this.state.initialTime, countDown: 10, dingCount: 0 })
+
+        Vibration.vibrate(1000)
+     
+        this.props.navigation.openDrawer()
+        setTimeout(() => {
+            this.props.navigation.navigate('Timeline')
+
+        }, 800)
     }
 
     startStop = () => {
-        this.setState({ timerRunning: !this.state.timerRunning }, async () => {
-            if (this.state.timerRunning) {
-                this.interval = setInterval(() => {
-                    if (this.state.timerSeconds > 0) {
-                        this.setState({ timerSeconds: this.state.timerSeconds - 1 })
+        this.setState({ start: !this.state.start }, async () => {
+            if (this.state.start) {
+                this.setState({ showCountDown: true })
+                this.countDownInterval = setInterval(() => {
+                    if (this.state.countDown > 0) {
+                        this.setState({ countDown: this.state.countDown - 1 })
                     }
                 }, 1000)
-                this._subscribe()
-                //Session ID is a ISO time stamp of when it started
-                this.setState({ sessionID: await STORAGE.newSession(this.state.initialTime) })
 
+
+                setTimeout(async () => {
+
+                    this.interval = setInterval(() => {
+                        if (this.state.timerSeconds > 0) {
+                            this.setState({ timerSeconds: this.state.timerSeconds - 1 })
+                        }
+                    }, 1000)
+                    this._subscribe()
+                    clearInterval(this.countDownInterval)
+                    //Session ID is a ISO time stamp of when it started
+                    this.setState({ sessionID: await STORAGE.newSession(this.state.initialTime), showCountDown: false, timerRunning: true })
+                }, 10000)
             } else {
+                this.setState({ timerRunning: false })
                 this._cleanUp()
                 //Save that they quit
             }
@@ -229,8 +258,8 @@ export default class Home extends React.Component {
                     placement="bottom"
                     allowChildInteraction={false}
                     onClose={() => this.setState({ toolTipIndex: this.state.toolTipIndex + 1 })}
-                ><Rewards total={this.state.totalTime} /></Tooltip>} />}
-                <Notify navigation={this.props.navigation} />
+                ><Rewards total={this.state.score} /></Tooltip>} />}
+                {/* <Notify navigation={this.props.navigation} /> */}
                 {this.state.timerRunning &&
                     <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center' }}>
                         <Text style={styles.slouchCount}>Slouches: </Text>
@@ -247,12 +276,12 @@ export default class Home extends React.Component {
                 >
                     {!this.state.timerRunning && this.state.todayTime == 0 && <Text style={styles.text}>{facts[(this.state.factIndex + 1) % facts.length]}</Text>}
                 </Animated.View>
-                <CountdownCircleTimer
+                {!this.state.timerRunning && <CountdownCircleTimer
                     isPlaying={this.state.timerRunning}
                     duration={this.state.initialTime}
                     colors={[[Colors.FIFTH, 0.33], [Colors.TERTIARY, 0.33], ['#B43718', 0.33]]}
                     size={215}
-                    onComplete={async () => {
+                    onComplete={() => {
                         this._finished()
                     }}
                 >
@@ -265,18 +294,37 @@ export default class Home extends React.Component {
                         <Text style={styles.timerTxt}>{this.formatTime(this.state.timerSeconds)}</Text>
                     </Tooltip>
                 </CountdownCircleTimer>
+                }
+                {this.state.timerRunning && <CountdownCircleTimer
+                    isPlaying={this.state.timerRunning}
+                    duration={this.state.initialTime}
+                    colors={[[Colors.FIFTH, 0.33], [Colors.TERTIARY, 0.33], ['#B43718', 0.33]]}
+                    size={215}
+                    onComplete={() => {
+                        this._finished()
+                    }}
+                >
+                    <Tooltip
+                        isVisible={this.state.toolTipIndex == 4}
+                        content={<Text style={{ textAlign: 'center' }}>Your time left will be shown here! Make sure it hits 00:00 for your points to count!</Text>}
+                        placement="top"
+                        onClose={() => this.setState({ toolTipIndex: this.state.toolTipIndex + 1 }, () => { this.props.navigation.openDrawer(); STORAGE.setFirstTime() })}
+                    >
+                        <Text style={styles.timerTxt}>{this.formatTime(this.state.timerSeconds)}</Text>
+                    </Tooltip>
+                </CountdownCircleTimer>
+                }
 
                 {!this.state.timerRunning && <View style={styles.group}>
                     <Text style={styles.helperTxt}>Slide To Set Time!</Text>
                     <Tooltip
                         isVisible={this.state.toolTipIndex == 0}
-                        content={<Text style={{ textAlign: 'center' }}>Adjust how long you want to stand up straight here!</Text>}
+                        content={<Text style={{ textAlign: 'center' }}>Adjust how long you want to sit up straight during a Frosture session!</Text>}
                         placement="top"
                         onClose={() => this.setState({ toolTipIndex: this.state.toolTipIndex + 1 })}
                     >
                         <View style={{ flexDirection: 'row', justifyContent: 'center' }}>
                             <Text style={{ color: 'white' }}>5</Text>
-
                             <Slider
                                 style={{ width: "60%", height: 40 }}
                                 minimumValue={300}
@@ -308,6 +356,20 @@ export default class Home extends React.Component {
                 {this.state.timerRunning && <TouchableOpacity onPress={this.startStop} style={styles.btn}><Text style={styles.cancelTxt}>Cancel</Text></TouchableOpacity>}
                 <Image style={{ width: '30%', resizeMode: 'contain' }} source={require('../assets/logo-txt.png')} />
 
+                <Modal
+                    animationType="slide"
+                    transparent={true}
+                    visible={this.state.showCountDown}
+                    onRequestClose={() => {
+                        this.setState({ showSens: false })
+                    }}
+                >
+                    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.SECONDARY, borderRadius: 7 }}>
+                        <Text style={styles.helperTxtBlack}>Frosture Session Starting In</Text>
+                        <Text style={styles.countDownText}>{this.state.countDown}</Text>
+                        <Image source={require('../assets/tutorial.gif')} style={{ width: "100%", resizeMode: 'contain' }} />
+                    </View>
+                </Modal>
             </SafeAreaView>
         );
     }
@@ -324,6 +386,13 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         backgroundColor: Colors.SECONDARY,
         paddingVertical: 60
+    },
+
+    modalContain: {
+        alignItems: 'center',
+        borderRadius: 10,
+        backgroundColor: 'white',
+        justifyContent: 'center'
     },
     group: {
         alignSelf: 'stretch',
@@ -351,6 +420,19 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         color: 'white',
         fontSize: 18,
+    },
+
+    countDownText: {
+        textAlign: 'center',
+        color: "white",
+        fontSize: 75,
+        color: Colors.TERTIARY
+    },
+
+    helperTxtBlack: {
+        textAlign: 'center',
+        color: 'white',
+        fontSize: 30,
     },
     slouchCount: {
         textAlign: 'center',

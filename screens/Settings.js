@@ -82,7 +82,7 @@ export default class Charts extends React.Component {
                 <View style={{ alignSelf: 'stretch' }}>
 
                     <Text style={styles.settingsLbl}>General</Text>
-                    <View style={[styles.setting, styles.top]}>
+                   {/* <View style={[styles.setting, styles.top]}>
                         <Text style={styles.text}>Notifications</Text>
                         <Switch
                             trackColor={{ false: 'grey', true: Colors.TERTIARY }}
@@ -92,8 +92,9 @@ export default class Charts extends React.Component {
                             value={this.state.isNotified}
                         />
                     </View>
+          */}
 
-                    <TouchableOpacity onPress={() => this.setState({showSens : true})} style={[styles.setting]}>
+                    <TouchableOpacity onPress={() => this.setState({showSens : true})} style={[styles.setting, styles.top]}>
                         <Text style={styles.text}>Adjust Sensitivity</Text>
                         <AntDesign name="right" size={24} color={Colors.PRIMARY} />
                     </TouchableOpacity>
@@ -104,15 +105,12 @@ export default class Charts extends React.Component {
 
 
                     <Text style={styles.settingsLbl}>About</Text>
-                    <TouchableOpacity onPress={() => Linking.openURL('https://google.com')} style={[styles.setting, styles.top]}>
+                    <TouchableOpacity onPress={() => Linking.openURL('http://frosture.com/index.html#faq')} style={[styles.setting, styles.top]}>
                         <Text style={styles.text}>FAQ and Support</Text>
                         <AntDesign name="right" size={24} color={Colors.PRIMARY} />
                     </TouchableOpacity>
-                    <TouchableOpacity onPress={() => Linking.openURL('https://google.com')} style={styles.setting}>
-                        <Text style={styles.text}>Rate Us</Text>
-                        <AntDesign name="right" size={24} color={Colors.PRIMARY} />
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={() => Linking.openURL('https://google.com')} style={[styles.setting, styles.bottom]}>
+
+                    <TouchableOpacity onPress={() => Linking.openURL('http://frosture.com/privacy.html')} style={[styles.setting, styles.bottom]}>
                         <Text style={styles.text}>Privacy Policy</Text>
                         <AntDesign name="right" size={24} color={Colors.PRIMARY} />
                     </TouchableOpacity>
@@ -140,6 +138,9 @@ export default class Charts extends React.Component {
                         <Sensitivity onClose={() => this.setState({ showSens: false })} />
                     </View>
                 </Modal>
+
+                
+
 
             </SafeAreaView>
         );

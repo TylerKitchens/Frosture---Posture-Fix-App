@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import moment from 'moment'
+import { setEnabled } from 'react-native/Libraries/Performance/Systrace';
 export const STORAGE = {
 
     async getAllSessions() {
@@ -59,22 +60,23 @@ export const STORAGE = {
         }
     },
 
-    async getTodayTotalTime(){
+    async getScore(){
         try {
             const jsonValue = await AsyncStorage.getItem('@sessions')
             if (jsonValue != null) {
                 let arr = JSON.parse(jsonValue)
                 let total = 0
                 arr.forEach(sess => {
-                    sess.date = new Date(sess.date)
-                    if(moment(sess.date).isSame(new Date(), "day") && sess.isCompleted){
-                        total += sess.duration / 60
-                    }
+                   if(sess.isCompleted){
+                       console.log("Completed: " + sess.isCompleted)
+                       total += sess.duration / 60,
+                       total -= sess.dings
+                   }
                 })
-                return total
+                return Math.floor(total)
             }
             else {
-                return -1
+                return 0
             }
         } catch (e) {
             console.log(e)
@@ -177,6 +179,24 @@ export const STORAGE = {
             await AsyncStorage.removeItem('@firstTime')
         } catch (e) {
             // saving error
+        }
+    },
+
+    async finished(id, dingCount) {
+        try {
+            let allSessions = await this.getAllSessions()
+            allSessions.forEach(sess => {
+                if(sess.date.toISOString() === id){
+                    sess.dings = dingCount
+                    sess.isCompleted = true
+                }
+            })
+            const jsonValue = JSON.stringify(allSessions)
+            await AsyncStorage.setItem('@sessions', jsonValue)
+           
+        } catch (e) {
+            // saving error
+            console.log(e)
         }
     },
 

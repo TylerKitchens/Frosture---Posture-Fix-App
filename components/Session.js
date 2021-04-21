@@ -51,7 +51,7 @@ export default function Session({ session }) {
 
     const share = async () => {
         await Share.share({
-            message: "Frosture helped me sit up straight for " + (session.duration / 60) + " minutes but it caught me slouching " + session.dings + " times! Can you beat that?"
+            message: "Frosture helped me sit up straight for " + (Math.floor(session.duration / 60)) + " minutes but it caught me slouching " + session.dings + " times! Can you beat that?"
         })
     }
     return (
@@ -59,7 +59,7 @@ export default function Session({ session }) {
             <View style={styles.container}>
                 <View style={styles.topRow}>
                     <View style={styles.pill}>
-                        <Text style={styles.timeTxt}>{session.duration / 60} {session.isCompleted ?  "Minute Frosture" : "Minute Attempt"} </Text>
+                        <Text style={styles.timeTxt}>{Math.floor(session.duration / 60)} {session.isCompleted ?  "Minute Frosture" : "Minute Attempt"} </Text>
                     </View>
                     <Text style={styles.otherTxt}>{moment(session.date).fromNow()}</Text>
 
